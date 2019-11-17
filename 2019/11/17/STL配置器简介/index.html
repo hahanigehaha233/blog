@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="STL配置器简介"><meta name="keywords" content="C++库"><meta name="author" content="Pan Wong"><meta name="copyright" content="Pan Wong"><title>STL配置器简介 | Wong's blog</title><link rel="shortcut icon" href="/melody-favicon.ico"><link rel="stylesheet" href="/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  }
+} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#stladdressof"><span class="toc-number">1.</span> <span class="toc-text"> STL::addressof</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#空间配置器"><span class="toc-number"></span> <span class="toc-text"> 空间配置器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#迭代器"><span class="toc-number"></span> <span class="toc-text"> 迭代器</span></a></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="/avatar.jpg"></div><div class="author-info__name text-center">Pan Wong</div><div class="author-info__description text-center"></div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/archives"><span class="pull-left">文章</span><span class="pull-right">4</span></a><a class="author-info-articles__tags article-meta" href="/tags"><span class="pull-left">标签</span><span class="pull-right">1</span></a><a class="author-info-articles__categories article-meta" href="/categories"><span class="pull-left">分类</span><span class="pull-right">2</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(/background.png)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/">Wong's blog</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page" href="/">Home</a><a class="site-page" href="/archives">Archives</a><a class="site-page" href="/tags">Tags</a><a class="site-page" href="/categories">Categories</a><a class="site-page" href="/about">About</a></span></div><div id="post-info"><div id="post-title">STL配置器简介</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-11-17</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/categories/STL/">STL</a><div class="post-meta-wordcount"><span>字数总计: </span><span class="word-count">596</span><span class="post-meta__separator">|</span><span>阅读时长: 1 分钟</span></div></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h4 id="stladdressof"><a class="markdownIt-Anchor" href="#stladdressof"></a> STL::addressof</h4>
+<p>可以在没有重载&amp;运算符的时候获得地址。</p>
+<h2 id="空间配置器"><a class="markdownIt-Anchor" href="#空间配置器"></a> 空间配置器</h2>
+<p>一般说的就是<code>std::alloc</code>，在<code>&lt;memory&gt;</code>中实现，包含三个文件</p>
+<ul>
+<li><code>&lt;stl_construct.h&gt;</code>:定义了全局函数<code>construct()</code>和<code>destroy()</code>，这两个方法会调用对象的构造和析构函数。</li>
+<li><code>&lt;stl_alloc.h&gt;</code>:内存的配置和释放在这里面实现，内部有两级配置器，第一级结构简单，封装了<code>malloc</code>和<code>free</code>，主要针对的是大内存分配，而第二级实现了自由链表和内存池，用于提升大量小额内存分配时的性能。</li>
+<li><code>&lt;stl_uninitialiezed.h&gt;</code>：大块内存的操作。</li>
+</ul>
+<p>其中，一级配置器有函数</p>
+<ul>
+<li><code>allocate()</code>:调用malloc进行分配</li>
+<li><code>deallocate()</code>:调用free进行回收</li>
+<li><code>oom_malloc()和oom_realloc()</code>:在空间不足的时候进行分配</li>
+</ul>
+<p>二级配置器中会对小于128bytes的内存分配使用free-list进行管理，这样会造成一定的资源浪费（指针占用），使用Union实现减少浪费。</p>
+<p>一般的内存分配顺序是：</p>
+<ol>
+<li>调用空间配置函数allocate()，如果申请的区块大于128bytes则调用第一级配置器，如果小于则检查对应的free-list查看是否有可用的区块。</li>
+<li>如果没有可用的区块，将申请大小上调到8的倍数，然后调用refill()，该函数会从内存池中获取20个新的节点，并加入到free-list中。从内存池中寻找是chunk_alloc()的工作。</li>
+<li>chunk_alloc()首先会检测内存剩余空间，如果满足的话直接返回，如果不满足全部但是满足供应一个或以上的区块，也返回；如果连一个区块都满足不了的时候，只有一些零头，会将其加入适当地free-list中，让后在system_heap中进行配置，如果系统都没有的话会发出bad_alloc异常。</li>
+</ol>
+<p><strong>注意</strong></p>
+<ul>
+<li>free-list是按照区块大小进行划分的。</li>
+<li>每次chunk_alloc会申请多一点的空间，多余空间会放入free_list中。</li>
+<li>参考《STL源码剖析》P68</li>
+</ul>
+<hr />
+<h2 id="迭代器"><a class="markdownIt-Anchor" href="#迭代器"></a> 迭代器</h2>
+<p>迭代器是一种行为类似指针的对象，而指针的各种行为最常见也最重要的便是内容提领和成员访问，因此迭代器最重要的编程工作就是对<code>operator*</code>和<code>operator-&gt;</code>进行重载。</p>
+<hr />
+</div></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined" target="_blank" rel="noopener">Pan Wong</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://hahanigehaha233.github.io/2019/11/17/STL%E9%85%8D%E7%BD%AE%E5%99%A8%E7%AE%80%E4%BB%8B/">https://hahanigehaha233.github.io/2019/11/17/STL%E9%85%8D%E7%BD%AE%E5%99%A8%E7%AE%80%E4%BB%8B/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://hahanigehaha233.github.io">Wong's blog</a>！</span></div></div><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/C-%E5%BA%93/">C++库</a></div><nav id="pagination"><div class="next-post pull-right"><a href="/2019/11/15/STL%E5%AE%B9%E5%99%A8%E7%AE%80%E4%BB%8B/"><span>STL简介</span><i class="fa fa-chevron-right"></i></a></div></nav></div></div><footer class="footer-bg" style="background-image: url(/background.png)"><div class="layout" id="footer"><div class="copyright">&copy;2013 - 2019 By Pan Wong</div><div class="framework-info"><span>驱动 - </span><a href="http://hexo.io" target="_blank" rel="noopener"><span>Hexo</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://github.com/Molunerfinn/hexo-theme-melody" target="_blank" rel="noopener"><span>Melody</span></a></div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/js/utils.js?version=1.6.1"></script><script src="/js/fancybox.js?version=1.6.1"></script><script src="/js/sidebar.js?version=1.6.1"></script><script src="/js/copy.js?version=1.6.1"></script><script src="/js/fireworks.js?version=1.6.1"></script><script src="/js/transition.js?version=1.6.1"></script><script src="/js/scroll.js?version=1.6.1"></script><script src="/js/head.js?version=1.6.1"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css"><script src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css"><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+  $('#nav').addClass('is-mobile')
+  $('footer').addClass('is-mobile')
+}</script></body></html>
