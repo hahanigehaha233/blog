@@ -74,7 +74,7 @@
 <li>目的地为某端口的SYN到达之后，该端口没有正在监听的服务器。</li>
 <li>请求超时：体现在recv()的超时上，如果recv超时之后数据才到达会拒绝。</li>
 <li>取消一个已经存在的连接。</li>
-<li>close()调用方关闭连接后仍然受到数据（close和发送FIN——shutdown不同shutdown只是对一个方向的连接进行关闭）：假设客户端调用了close()，使用close后仍然会发送<code>FIN</code>段给server，但是此时client不能再通过此socket发送和接收数据，此时server调用read，如果接收到<code>FIN</code>段会返回0，但server此时还是可以write给client的，write调用只负责把数据交给TCP发送缓冲区就可以成功返回了，所以不会出错，而client收到数据后应答一个RST段，表示client已经不能接收数据，连接重置，server收到RST段后无法立刻通知应用层，只把这个状态保存在TCP协议层。（对于Linux下来说，无论是FIN还是RST，应用层read将会返回0，正是因为这样）如果client再次调用write发数据给server，由于TCP协议层已经处于RST状态了，因此不会将数据发出，而是发一个SIGPIPE信号给应用层，SIGPIPE信号的缺省处理动作是终止程序。当一个进程向某个已收到RST的套接字执行写操作时，（此时写操作返回EPIPE错误）内核向该进程发送个SIGPIPE信号，该信号的默认行为是终止进程，因此进程必须捕获它以免不情愿地被终止。</li>
+<li>close()调用方关闭连接后仍然受到数据（close和发送FIN——shutdown不同shutdown只是对一个方向的连接进行关闭）：假设客户端调用了close()，使用close后仍然会发送<code>FIN</code>段给server，但是此时client不能再通过此socket发送和接收数据，此时server调用read，如果接收到<code>FIN</code>段会返回0，但server此时还是可以write给client的，write调用只负责把数据交给TCP发送缓冲区就可以成功返回了，所以不会出错，而client收到数据后应答一个RST段，表示client已经不能接收数据，连接重置，server收到RST段后无法立刻通知应用层，只把这个状态保存在TCP协议层。（对于Linux下来说，无论是FIN还是RST，应用层read将会返回0，正是因为这样）如果server再次调用write发数据给client，由于TCP协议层已经处于RST状态了，因此不会将数据发出，而是发一个SIGPIPE信号给应用层，SIGPIPE信号的缺省处理动作是终止程序。当一个进程向某个已收到RST的套接字执行写操作时，（此时写操作返回EPIPE错误）内核向该进程发送个SIGPIPE信号，该信号的默认行为是终止进程，因此进程必须捕获它以免不情愿地被终止。</li>
 </ul>
 <hr />
 <h3 id="sigpipe信号"><a class="markdownIt-Anchor" href="#sigpipe信号"></a> SIGPIPE信号</h3>
