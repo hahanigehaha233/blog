@@ -1,0 +1,86 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="New的艺术"><meta name="keywords" content=""><meta name="author" content="Pan Wong"><meta name="copyright" content="Pan Wong"><title>New的艺术 | Wong's blog</title><link rel="shortcut icon" href="/sad_face.ico"><link rel="stylesheet" href="/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  }
+} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#new其实是一个运算符"><span class="toc-number">1.</span> <span class="toc-text"> New其实是一个运算符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#和malloc的不同"><span class="toc-number">2.</span> <span class="toc-text"> 和malloc的不同</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#当你想写一个new时你应该注意这些"><span class="toc-number">3.</span> <span class="toc-text"> 当你想写一个new时，你应该注意这些</span></a></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="/avatar.jpg"></div><div class="author-info__name text-center">Pan Wong</div><div class="author-info__description text-center"></div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/archives"><span class="pull-left">文章</span><span class="pull-right">9</span></a><a class="author-info-articles__tags article-meta" href="/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/categories"><span class="pull-left">分类</span><span class="pull-right">5</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(/moon.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/">Wong's blog</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page" href="/">Home</a><a class="site-page" href="/archives">Archives</a><a class="site-page" href="/tags">Tags</a><a class="site-page" href="/categories">Categories</a><a class="site-page" href="/about">About</a></span></div><div id="post-info"><div id="post-title">New的艺术</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-11-27</time><div class="post-meta-wordcount"><span>字数总计: </span><span class="word-count">1.1k</span><span class="post-meta__separator">|</span><span>阅读时长: 3 分钟</span></div></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><p><code>New</code>在C++中占据了举足轻重的位置，通常我们谈到new是会认为其是在堆区为对象分配内存，就这，今天深入了解new。</p>
+<h3 id="new其实是一个运算符"><a class="markdownIt-Anchor" href="#new其实是一个运算符"></a> New其实是一个运算符</h3>
+<p>如同<code>+和-</code>一样，new也是一个运算符，这样的话在我们编写类的时候就可以重载new来完成我们自己想做的事情，对应的数组类型<code>new[]和delete[]</code>，new和delete是成对出现的，我们这里暂且只讨论new。我们可以因为各种各样的事情实现自己的new，但是无外乎以下几种情况：</p>
+<ul>
+<li>为了检测运用错误：出现了数据越位写入的情况，可以使用new操作对分类的对象内存前后加检测为来进行判断；针对没有delete或者多次delete错误，可以通过定义new为一串动态分配内存，而delete则是将地址从中移走，这样便可以方便检测出delete异常。</li>
+<li>收集动态内存的使用信息：重载new可以实现对动态内存分配的监控，帮助实现更好的编译器。</li>
+<li>增加分配和归还速度：通用分配器一般会比专门的慢，这便可以定制new，例如你的程序是单线程的，而编译器所带来的new和delete是具备线程安全的，这时你就可以自己实现一个。</li>
+<li>降低额外空间开销：默认分配器大多会因为后期效率考虑，在申请内存的时候额外申请一部分。</li>
+<li>集中对象：这个是显而易见的，通过new将这些数据结构集中，使得发生内存页（我的理解是CPU高速缓存命中率）错误的频率降低。</li>
+<li>禁止在堆上分配空间：重载为私有。</li>
+</ul>
+<h3 id="和malloc的不同"><a class="markdownIt-Anchor" href="#和malloc的不同"></a> 和malloc的不同</h3>
+<p>其实这两个的关联很少，我觉得说不出来的原因主要是因为对new的了解很少，只知道它们两个都是分配内存的，这样当然说不出不同。</p>
+<p>new可以通过malloc来实现内存分配，SGI STL就是这样实现其内存分配器<code>std::alloc</code>的，new是更上一层的封装，它不会让用户考虑重新分配的问题(realloc())，它自己会完成对内容的扩充。<br />
+既然可以看成是更上一层的实现了，区别也就很明显了：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left"></th>
+<th style="text-align:left">New</th>
+<th style="text-align:left">Malloc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">内存分配位置</td>
+<td style="text-align:left">视具体实现而定，一般为堆</td>
+<td style="text-align:left">堆</td>
+</tr>
+<tr>
+<td style="text-align:left">内存分配失败</td>
+<td style="text-align:left">抛出bad_alloc异常或者调用new-hander处理函数</td>
+<td style="text-align:left">返回NULL</td>
+</tr>
+<tr>
+<td style="text-align:left">内存分配成功</td>
+<td style="text-align:left">完整类型指针</td>
+<td style="text-align:left">void*</td>
+</tr>
+<tr>
+<td style="text-align:left">分配大小</td>
+<td style="text-align:left">编译器根据类型得出</td>
+<td style="text-align:left">用户计算</td>
+</tr>
+<tr>
+<td style="text-align:left">处理数组</td>
+<td style="text-align:left">数组版本的new[]</td>
+<td style="text-align:left">用户自行计算大小</td>
+</tr>
+<tr>
+<td style="text-align:left">重载</td>
+<td style="text-align:left">可以</td>
+<td style="text-align:left">不允许</td>
+</tr>
+<tr>
+<td style="text-align:left">构造函数</td>
+<td style="text-align:left">会调用</td>
+<td style="text-align:left">不会调用</td>
+</tr>
+</tbody>
+</table>
+<p>这样看下来，New的确可以算是一个对malloc的封装了。</p>
+<p>每个的例子可以参考<a href="https://www.cnblogs.com/ywliao/articles/8116622.html" target="_blank" rel="noopener">这篇</a>文章.</p>
+<h3 id="当你想写一个new时你应该注意这些"><a class="markdownIt-Anchor" href="#当你想写一个new时你应该注意这些"></a> 当你想写一个new时，你应该注意这些</h3>
+<p>new的返回值咋一看非常简单：如果有能力提供申请的内存，就返回一个指针指向那块内存，如果不行则抛出一个bad_alloc异常，每次分配内存失败后会调用new-handing函数，只有当指向new-handing函数的指针是null，operator new才会抛出异常。<br />
+下面是一段operator new的伪代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">void* operator new(std::size_t size) throw(std::bad_alloc)</span><br><span class="line">&#123;</span><br><span class="line">  using namespace std;</span><br><span class="line">  if(size == 0)</span><br><span class="line">  &#123;</span><br><span class="line">    size = 1;</span><br><span class="line">  &#125;</span><br><span class="line">  while(true)</span><br><span class="line">  &#123;</span><br><span class="line">    尝试分配size bytes;</span><br><span class="line">    if(分配成功) return(一个指针，指向分配得来的内存)</span><br><span class="line"></span><br><span class="line">    分配失败；</span><br><span class="line">    找出目前的new-handing函数</span><br><span class="line">    new_hadler globalHandler = set_new_hadler(0);</span><br><span class="line">    set_new_hadler(globalHandler);</span><br><span class="line"></span><br><span class="line">    if(globalHandler)(*globalHandler)();</span><br><span class="line">    else throw std::bad_alloc();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意以下几点：</p>
+<ul>
+<li>operator new应该含有一个无穷循环，并在其中尝试分配内存，如果它无法满足内存需求，则调用new-handing，它可以处理0bytes的请求。</li>
+<li>new会继承，这不是一个好的行为，可以在new中对要分配的内存进行判断，在等于当前的类大小时才进行，否则调用默认new函数。</li>
+<li>如果要写new，delete也必须要写，并且在收到一个null指针的时候不会再去释放一次。</li>
+</ul>
+</div></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined" target="_blank" rel="noopener">Pan Wong</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://hahanigehaha233.github.io/2019/11/27/New%E7%9A%84%E8%89%BA%E6%9C%AF/">https://hahanigehaha233.github.io/2019/11/27/New%E7%9A%84%E8%89%BA%E6%9C%AF/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://hahanigehaha233.github.io">Wong's blog</a>！</span></div></div><div class="post-meta__tag-list"></div><nav id="pagination"><div class="next-post pull-right"><a href="/2019/11/24/%E5%8F%91%E5%B8%83%E8%AE%A2%E9%98%85%E6%A8%A1%E5%BC%8F/"><span>发布订阅模式</span><i class="fa fa-chevron-right"></i></a></div></nav></div></div><footer class="footer-bg" style="background-image: url(/moon.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2013 - 2019 By Pan Wong</div><div class="framework-info"><span>驱动 - </span><a href="http://hexo.io" target="_blank" rel="noopener"><span>Hexo</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://github.com/Molunerfinn/hexo-theme-melody" target="_blank" rel="noopener"><span>Melody</span></a></div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/js/utils.js?version=1.6.1"></script><script src="/js/fancybox.js?version=1.6.1"></script><script src="/js/sidebar.js?version=1.6.1"></script><script src="/js/copy.js?version=1.6.1"></script><script src="/js/fireworks.js?version=1.6.1"></script><script src="/js/transition.js?version=1.6.1"></script><script src="/js/scroll.js?version=1.6.1"></script><script src="/js/head.js?version=1.6.1"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css"><script src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css"><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+  $('#nav').addClass('is-mobile')
+  $('footer').addClass('is-mobile')
+}</script></body></html>
